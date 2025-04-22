@@ -34,6 +34,11 @@
             border-radius: 5px;
             z-index: 100;
         }
+
+        @font-face {
+  font-family: myFirstFont;
+  src: url(../Videojuego-Guardianes-verdes/fonts/Bangers-Regular.ttf);
+}
     </style>
 </head>
 <body>
@@ -92,7 +97,7 @@
             hueso: 0
         };
 
-        let characterSelectSize = { width: 100, height: 100 };
+        let characterSelectSize = { width: 170, height: 170 };
         let playerSize = { width: 120, height: 120 };
         let enemySize = { width: 150, height: 150 };
         let textColor = "white";
@@ -115,8 +120,8 @@
         let iconSizes = {};
         const objectSize = { width: 50, height: 50 };
 
-        let menuBackground = 'imagenes/fondos/escenariov2.svg';
-        let characterSelectBackground = 'imagenes/fondos/escenariov2.svg';
+        let menuBackground = 'imagenes/fondos/menuinicio.svg';
+        let characterSelectBackground = 'imagenes/fondos/menuseleccion.svg';
         let playingBackgrounds = [
             'imagenes/fondos/escenariov1.svg',
             'imagenes/fondos/escenariov2.svg',
@@ -125,8 +130,8 @@
         ];
         let currentBackgroundIndex = 0;
         let currentPlayingBackground = playingBackgrounds[currentBackgroundIndex];
-        let pauseBackground = 'imagenes/fondos/escenariov2.svg';
-        let gameOverBackground = 'imagenes/fondos/escenariov2.svg';
+        let pauseBackground = 'imagenes/fondos/menupausa.svg';
+        let gameOverBackground = 'imagenes/fondos/menugameover.svg';
 
         let maxScore = 0;
         let playerDead = false;
@@ -210,28 +215,28 @@
                 stand: loadImage('imagenes/personajes/cuerpospinpie.gif'),
                 left: loadImage('imagenes/personajes/ratacorriendoizq.gif'),
                 right: loadImage('imagenes/personajes/ratacorriendoder.gif'),
-                select: loadImage('imagenes/personajes/spin.svg'),
+                select: loadImage('imagenes/personajes/spin2.svg'),
                 dead: loadImage('imagenes/personajes/cuerpospindie.gif')
             };
             characterImages["red"] = {
                 stand: loadImage('imagenes/personajes/wonejo.gif'),
                 left: loadImage('imagenes/personajes/wonejocaminataizq.gif'),
                 right: loadImage('imagenes/personajes/wonejocaminatader.gif'),
-                select: loadImage('imagenes/personajes/wonejoquieto.svg'),
+                select: loadImage('imagenes/personajes/wonejoquieto2.svg'),
                 dead: loadImage('imagenes/personajes/wonejodie.gif')
             };
             characterImages["yellow"] = {
                 stand: loadImage('imagenes/personajes/ada.gif'),
                 left: loadImage('imagenes/personajes/adacaminataizq.gif'),
                 right: loadImage('imagenes/personajes/adacaminatader.gif'),
-                select: loadImage('imagenes/personajes/ada.svg'),
+                select: loadImage('imagenes/personajes/hada.svg'),
                 dead: loadImage('imagenes/personajes/adadie.gif')
             };
             characterImages["purple"] = {
                 stand: loadImage('imagenes/personajes/capibarapie.gif'),
                 left: loadImage('imagenes/personajes/caminataCapibaraIzq.gif'),
                 right: loadImage('imagenes/personajes/caminataCapibarader.gif'),
-                select: loadImage('imagenes/personajes/capibara.svg'),
+                select: loadImage('imagenes/personajes/capibara2.svg'),
                 dead: loadImage('imagenes/personajes/capibaradie.gif')
             };
 
@@ -594,31 +599,31 @@
 
         function drawMenu() {
             textFont('Bangers');
-            fill(0, 0, 0, 150);
+            fill(0, 0, 0, 0);
             rect(0, 0, width, height);
 
             textSize(height * 0.06);
             fill(255, 0, 0);
             textAlign(CENTER, CENTER);
-            text("Guardianes Verdes", width / 2, height / 2 - height * 0.1);
+            text("", width / 2, height / 2 - height * 0.1);
             textSize(height * 0.04);
             fill("#00d91e");
-            text("Presiona ESPACIO para comenzar", width / 2, height / 2);
+            text("", width / 2, height / 2);
         }
 
         function drawCharacterSelect() {
             textFont('Bangers');
-            fill(0, 0, 0, 150);
+            fill(0, 0, 0, 0);
             rect(0, 0, width, height);
 
             textSize(height * 0.06);
             fill(textColor);
             textAlign(CENTER, CENTER);
-            text("Selecciona a tu GUARDIAN", width / 2, height / 2 - height * 0.15);
+            text("", width / 2, height / 2 - height * 0.15);
             
             textSize(height * 0.04);
-            text("Presiona ENTER para jugar", width / 2, height / 2 + height * 0.3);
-            text("Presiona R para reiniciar la puntuación", width / 2, height / 2 + height * 0.35);
+            text("", width / 2, height / 2 + height * 0.3);
+            text("", width / 2, height / 2 + height * 0.35);
 
             for (let i = 0; i < characters.length; i++) {
                 let char = characters[i];
@@ -643,33 +648,32 @@
 
         function drawGameOver() {
             textFont('Bangers');
-            fill(0, 0, 0, 150);
+            fill(0, 0, 0, 0);
             rect(0, 0, width, height);
-
             textSize(height * 0.06);
-            fill(255, 0, 0);
+            fill(0, 0, 0);
             textAlign(CENTER, CENTER);
-            text("Game Over", width / 2, height / 2 - height * 0.1);
+            text("", width / 2, height / 2 - height * 0.1);
             textSize(height * 0.04);
             text("Puntuación: " + score, width / 2, height / 2);
             text("Máxima puntuación: " + maxScore, width / 2, height / 2 + height * 0.05);
-            text("Presiona R para reiniciar", width / 2, height / 2 + height * 0.1);
-            text("Presiona M para volver al menú", width / 2, height / 2 + height * 0.15);
+            text("", width / 2, height / 2 + height * 0.1);
+            text("", width / 2, height / 2 + height * 0.15);
         }
 
         function drawPauseScreen() {
             textFont('Bangers');
-            fill(0, 0, 0, 150);
+            fill(0, 0, 0, 0);
             rect(0, 0, width, height);
 
             textSize(height * 0.06);
             fill(textColor);
             textAlign(CENTER, CENTER);
-            text("Paused", width / 2, height / 2 - height * 0.1);
+            text("", width / 2, height / 2 - height * 0.1);
             textSize(height * 0.04);
-            text("Presiona ESC para seguir", width / 2, height / 2);
-            text("Presiona M para volver al menú", width / 2, height / 2 + height * 0.1);
-            text("Presiona P para mutear/desmutear", width / 2, height / 2 + height * 0.15);
+            text("", width / 2, height / 2);
+            text("", width / 2, height / 2 + height * 0.1);
+            text("", width / 2, height / 2 + height * 0.15);
         }
 
         function keyPressed() {

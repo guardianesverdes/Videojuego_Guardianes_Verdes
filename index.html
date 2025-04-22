@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beta Guardianes Verdes</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #1E3A5F center/cover no-repeat;
+            overflow: hidden;
+            font-family: 'Bangers', cursive;
+        }
+        canvas {
+            border: 1px solid white;
+            max-width: 100%;
+            max-height: 100%;
+            background: transparent;
+        }
+        #audio-controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            color: white;
+            font-family: 'Bangers', cursive;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <audio id="bg-music" loop autoplay>
+        <source src="imagenes/assets/musicafondo.mp3" type="audio/mpeg">
+        Tu navegador no soporta el elemento de audio.
+    </audio>
+    
+    <div id="audio-controls">Música: ON (P para mutear)</div>
+    
+    <script>
+        let fontLoaded = false;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            let div = document.createElement('div');
+            div.style.fontFamily = 'Bangers';
+            div.style.position = 'absolute';
+            div.style.left = '-100px';
+            div.style.visibility = 'hidden';
+            div.innerHTML = '.';
+            document.body.appendChild(div);
+            
+            let checkFont = setInterval(function() {
+                if (div.offsetWidth !== 0) {
+                    fontLoaded = true;
+                    clearInterval(checkFont);
+                    document.body.removeChild(div);
+                }
+            }, 100);
+        });
+
+        let player;
+        let fallingObjects = [];
+        let containers = [];
+        let score = 0;
+        let gameState = "menu";
+        let characters = ["green", "blue", "red", "yellow", "purple"];
+        let selectedCharacter = "green";
+        let gravity = 0.5;
+        let moveLeft = false;
+        let moveRight = false;
+        let enemy;
+        let health = 100;
+        let startTime;
+        let elapsedTime = 0;
+        let pauseStartTime = 0;
+        let totalPausedTime = 0;
+        let difficultyLevel = 1;
+        const baseEnemySpeed = 2;
+        const baseObjectSpeed = 3;
+        const baseThrowRate = 60;
+        let inventory = {
+            botella: 0,
+            caja: 0,
+            banano: 0,
+            hueso: 0
+        };
+
+        let characterSelectSize = { width: 100, height: 100 };
+        let playerSize = { width: 120, height: 120 };
+        let enemySize = { width: 150, height: 150 };
+        let textColor = "white";
+        let playerImg, enemyImg;
+        let characterImages = {};
+        let goodObjectsImages = [];
+        let badObjectsImages = [];
+        let containerImages = {
+            reciclaje: null,
+            organico: null
+        };
+        
+        let itemIcons = {
+            botella: null,
+            caja: null,
+            banano: null,
+            hueso: null
+        };
+
+        let iconSizes = {};
+        const objectSize = { width: 50, height: 50 };
+
+        let menuBackground = 'imagenes/fondos/escenariov2.svg';
+        let characterSelectBackground = 'imagenes/fondos/escenariov2.svg';
+        let playingBackgrounds = [
+            'imagenes/fondos/escenariov1.svg',
+            'imagenes/fondos/escenariov2.svg',
+            'imagenes/fondos/escenariov3.svg',
+            'imagenes/fondos/playa.svg'
+        ];
+        let currentBackgroundIndex = 0;
+        let currentPlayingBackground = playingBackgrounds[currentBackgroundIndex];
+        let pauseBackground = 'imagenes/fondos/escenariov2.svg';
+        let gameOverBackground = 'imagenes/fondos/escenariov2.svg';
+
+        let maxScore = 0;
+        let playerDead = false;
+        let deathTime = 0;
+        let deathImage;
+
+        let bgMusic;
+        let isMuted = false;
+        let audioControls;
+
+        let uiBackgroundImg;
+        let scoreBackgroundImg;
+
+        window.onload = function() {
+            bgMusic = document.getElementById('bg-music');
+            bgMusic.volume = 0.1;
+            audioControls = document.getElementById('audio-controls');
+            
+            let playPromise = bgMusic.play();
+            
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    audioControls.innerHTML = 'Click para activar música';
+                    document.body.addEventListener('click', initAudio, {once: true});
+                });
+            }
+        };
+
+        function initAudio() {
+            bgMusic.play();
+            updateAudioControls();
+        }
+
+        function setup() {
+            createCanvas(windowWidth, windowHeight).style('background: transparent');
+            imageMode(CORNER);
+
+            textFont('Bangers');
+            
+            bgMusic = document.getElementById('bg-music');
+            bgMusic.volume = 0.1;
+            
+            audioControls = document.getElementById('audio-controls');
+            updateAudioControls();
+
+            uiBackgroundImg = loadImage('imagenes/assets/fondoestadisticas.svg');
+            scoreBackgroundImg = loadImage('imagenes/assets/fondopuntuacion.svg');
+
+            itemIcons.botella = loadImage('imagenes/assets/botella.svg');
+            itemIcons.caja = loadImage('imagenes/assets/caja.svg');
+            itemIcons.banano = loadImage('imagenes/assets/banana.svg');
+            itemIcons.hueso = loadImage('imagenes/assets/hueso.svg');
+
+            containerImages.reciclaje = loadImage('imagenes/assets/aprovechable.svg');
+            containerImages.organico = loadImage('imagenes/assets/organico.svg');
+
+            goodObjectsImages = [
+                { img: loadImage('imagenes/assets/botella.gif'), subtype: 'botella' },
+                { img: loadImage('imagenes/assets/caja.gif'), subtype: 'caja' },
+                { img: loadImage('imagenes/assets/HUESO.gif'), subtype: 'hueso' },
+                { img: loadImage('imagenes/assets/banano.gif'), subtype: 'banano' },
+                { img: loadImage('imagenes/assets/gota.png'), subtype: 'cura' }
+            ];
+            
+            badObjectsImages = [
+                loadImage('imagenes/assets/pila.gif'),
+                loadImage('imagenes/assets/papel.gif')
+            ];
+
+            playerImg = loadImage('imagenes/personajes/tortuStandUp.gif');
+            enemyImg = loadImage('imagenes/personajes/RATACOPTERO.gif');
+
+            characterImages["green"] = {
+                stand: loadImage('imagenes/personajes/tortuStandUp.gif'),
+                left: loadImage('imagenes/personajes/caminataIzq.gif'),
+                right: loadImage('imagenes/personajes/caminataDer.gif'),
+                select: loadImage('imagenes/personajes/tortu.svg'),
+                dead: loadImage('imagenes/personajes/tortufail.gif')
+            };
+            characterImages["blue"] = {
+                stand: loadImage('imagenes/personajes/cuerpospinpie.gif'),
+                left: loadImage('imagenes/personajes/ratacorriendoizq.gif'),
+                right: loadImage('imagenes/personajes/ratacorriendoder.gif'),
+                select: loadImage('imagenes/personajes/spin.svg'),
+                dead: loadImage('imagenes/personajes/cuerpospindie.gif')
+            };
+            characterImages["red"] = {
+                stand: loadImage('imagenes/personajes/wonejo.gif'),
+                left: loadImage('imagenes/personajes/wonejocaminataizq.gif'),
+                right: loadImage('imagenes/personajes/wonejocaminatader.gif'),
+                select: loadImage('imagenes/personajes/wonejoquieto.svg'),
+                dead: loadImage('imagenes/personajes/wonejodie.gif')
+            };
+            characterImages["yellow"] = {
+                stand: loadImage('imagenes/personajes/ada.gif'),
+                left: loadImage('imagenes/personajes/adacaminataizq.gif'),
+                right: loadImage('imagenes/personajes/adacaminatader.gif'),
+                select: loadImage('imagenes/personajes/ada.svg'),
+                dead: loadImage('imagenes/personajes/adadie.gif')
+            };
+            characterImages["purple"] = {
+                stand: loadImage('imagenes/personajes/capibarapie.gif'),
+                left: loadImage('imagenes/personajes/caminataCapibaraIzq.gif'),
+                right: loadImage('imagenes/personajes/caminataCapibarader.gif'),
+                select: loadImage('imagenes/personajes/capibara.svg'),
+                dead: loadImage('imagenes/personajes/capibaradie.gif')
+            };
+
+            initializeGame();
+        }
+
+        function updateAudioControls() {
+            if (isMuted) {
+                audioControls.innerHTML = 'Música: OFF (P para activar)';
+            } else {
+                audioControls.innerHTML = 'Música: ON (P para mutear)';
+            }
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            bgMusic.volume = isMuted ? 0 : 0.1;
+            updateAudioControls();
+            
+            if (!isMuted && gameState === "playing") {
+                bgMusic.play();
+            }
+        }
+
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+        }
+
+        function initializeGame() {
+            player = new Player();
+            enemy = new Enemy();
+            startTime = millis();
+            totalPausedTime = 0;
+            fallingObjects = [];
+            containers = [];
+            score = 0;
+            health = 100;
+            difficultyLevel = 1;
+            currentBackgroundIndex = 0;
+            currentPlayingBackground = playingBackgrounds[currentBackgroundIndex];
+            playerDead = false;
+            deathTime = 0;
+            inventory = {
+                botella: 0,
+                caja: 0,
+                banano: 0,
+                hueso: 0
+            };
+            
+            if (!isMuted) {
+                bgMusic.currentTime = 0;
+                bgMusic.play();
+            }
+        }
+
+        function draw() {
+            clear();
+
+            textFont('Bangers');
+
+            switch (gameState) {
+                case "menu":
+                    document.body.style.backgroundImage = `url(${menuBackground})`;
+                    drawMenu();
+                    break;
+                case "characterSelect":
+                    document.body.style.backgroundImage = `url(${characterSelectBackground})`;
+                    drawCharacterSelect();
+                    break;
+                case "playing":
+                    document.body.style.backgroundImage = `url(${currentPlayingBackground})`;
+                    updateGame();
+                    break;
+                case "gameOver":
+                    document.body.style.backgroundImage = `url(${gameOverBackground})`;
+                    drawGameOver();
+                    break;
+                case "paused":
+                    document.body.style.backgroundImage = `url(${pauseBackground})`;
+                    drawPauseScreen();
+                    break;
+            }
+        }
+
+        function updateGame() {
+            textFont('Bangers');
+
+            difficultyLevel = 1 + Math.floor(elapsedTime / 30000);
+
+            // Primero actualizamos las posiciones
+            player.update();
+            enemy.update();
+
+            // Luego dibujamos los contenedores
+            for (let i = containers.length - 1; i >= 0; i--) {
+                containers[i].update();
+                containers[i].display();
+                if (containers[i].shouldRemove) {
+                    containers.splice(i, 1);
+                }
+            }
+
+            // Ahora dibujamos al jugador y enemigo (encima de los contenedores)
+            player.display();
+            enemy.display();
+
+            if (frameCount % Math.max(10, baseThrowRate - difficultyLevel * 2) === 0) {
+                enemy.throwObject();
+            }
+
+            // Generar nuevos contenedores aleatoriamente
+            if (random() < 0.002) {
+                spawnContainer();
+            }
+
+            for (let i = fallingObjects.length - 1; i >= 0; i--) {
+                let obj = fallingObjects[i];
+                obj.update();
+                obj.display();
+
+                if (obj.shouldRemove) {
+                    fallingObjects.splice(i, 1);
+                    continue;
+                }
+
+                if (obj.hits(player)) {
+                    if (obj.type === "good") {
+                        score += 10;
+                        if (score > maxScore) maxScore = score;
+                        if (score >= 100 && score % 100 === 0) {
+                            if (currentBackgroundIndex < playingBackgrounds.length - 1) {
+                                currentBackgroundIndex++;
+                                currentPlayingBackground = playingBackgrounds[currentBackgroundIndex];
+                            }
+                        }
+                        
+                        if (obj.subtype === 'cura') {
+                            let missingHealth = 100 - health;
+                            health += missingHealth * 0.35;
+                            health = Math.min(health, 100);
+                        } else {
+                            if (obj.subtype === 'botella') inventory.botella++;
+                            else if (obj.subtype === 'caja') inventory.caja++;
+                            else if (obj.subtype === 'banano') inventory.banano++;
+                            else if (obj.subtype === 'hueso') inventory.hueso++;
+                        }
+                    } else {
+                        health -= 20;
+                        if (health <= 0) {
+                            health = 0;
+                            if (!playerDead) {
+                                playerDead = true;
+                                deathTime = millis();
+                            }
+                        }
+                    }
+                    fallingObjects.splice(i, 1);
+                }
+            }
+
+            if (playerDead && millis() - deathTime >= 2000) {
+                gameState = "gameOver";
+                bgMusic.pause();
+            }
+
+            // Dibujar UI
+            if (uiBackgroundImg) {
+                let uiBgWidth = width * 0.23;
+                let uiBgHeight = height * 0.35;
+                let uiBgX = 10;
+                let uiBgY = 10;
+                
+                image(uiBackgroundImg, uiBgX, uiBgY, uiBgWidth, uiBgHeight);
+                
+                let textOffsetX = uiBgX + 20;
+                let textOffsetY = uiBgY + 15;
+                
+                fill(170, 51, 51);
+                rect(textOffsetX, textOffsetY, width * 0.2, height * 0.02);
+                fill(225, 224, 215);
+                rect(textOffsetX, textOffsetY, map(health, 0, 100, 0, width * 0.2), height * 0.02);
+                
+                elapsedTime = millis() - startTime - totalPausedTime;
+                let seconds = Math.floor(elapsedTime / 1000);
+                
+                textAlign(LEFT, TOP);
+                textSize(height * 0.03);
+                fill("#ffffff");
+                text("Tiempo: " + seconds + "s", textOffsetX, textOffsetY + height * 0.03);
+                text("Dificultad: " + difficultyLevel, textOffsetX, textOffsetY + height * 0.06);
+                
+                iconSizes = {
+                    botella: { width: width * 0.02, height: height * 0.05 },
+                    caja: { width: width * 0.02, height: height * 0.04 },
+                    banano: { width: width * 0.02, height: height * 0.05 },
+                    hueso: { width: width * 0.02, height: height * 0.03 }
+                };
+
+                let iconSpacing = height * 0.06;
+                let inventoryStartX = textOffsetX + width * 0.01;
+
+                if (itemIcons.botella) {
+                    let iconW = iconSizes.botella.width;
+                    let iconH = iconSizes.botella.height;
+                    image(itemIcons.botella, inventoryStartX, textOffsetY + height * 0.10, iconW, iconH);
+                    textAlign(LEFT, CENTER);
+                    text(`${inventory.botella}`, inventoryStartX + iconW + 25, textOffsetY + height * 0.10 + iconH/2);
+                }
+
+                if (itemIcons.caja) {
+                    let iconW = iconSizes.caja.width;
+                    let iconH = iconSizes.caja.height;
+                    image(itemIcons.caja, inventoryStartX, textOffsetY + height * 0.10 + iconSpacing, iconW, iconH);
+                    textAlign(LEFT, CENTER);
+                    text(`${inventory.caja}`, inventoryStartX + iconW + 25, textOffsetY + height * 0.10 + iconSpacing + iconH/2);
+                }
+
+                if (itemIcons.banano) {
+                    let iconW = iconSizes.banano.width;
+                    let iconH = iconSizes.banano.height;
+                    image(itemIcons.banano, inventoryStartX, textOffsetY + height * 0.10 + iconSpacing*2, iconW, iconH);
+                    textAlign(LEFT, CENTER);
+                    text(`${inventory.banano}`, inventoryStartX + iconW + 25, textOffsetY + height * 0.10 + iconSpacing*2 + iconH/2);
+                }
+
+                if (itemIcons.hueso) {
+                    let iconW = iconSizes.hueso.width;
+                    let iconH = iconSizes.hueso.height;
+                    image(itemIcons.hueso, inventoryStartX, textOffsetY + height * 0.10 + iconSpacing*3, iconW, iconH);
+                    textAlign(LEFT, CENTER);
+                    text(`${inventory.hueso}`, inventoryStartX + iconW + 25, textOffsetY + height * 0.10 + iconSpacing*3 + iconH/2);
+                }
+            }
+
+            if (scoreBackgroundImg) {
+                let scoreBgWidth = width * 0.23;
+                let scoreBgHeight = height * 0.10;
+                let scoreBgX = width - scoreBgWidth - 10;
+                let scoreBgY = 10;
+                
+                image(scoreBackgroundImg, scoreBgX, scoreBgY, scoreBgWidth, scoreBgHeight);
+            }
+
+            fill("#ffffff");
+            textSize(height * 0.04);
+            textAlign(RIGHT, TOP);
+            text("Puntuación: " + score, width * 0.98, height * 0.02);
+            text("Puntuación Máxima: " + maxScore, width * 0.98, height * 0.06);
+        }
+
+        function spawnContainer() {
+            let types = ['reciclaje', 'organico'];
+            let type = random(types);
+            let container = new Container(
+                random(width * 0.2, width * 0.8),
+                height - 100,  // Cambiado para posicionar más abajo
+                type,
+                containerImages[type]
+            );
+            containers.push(container);
+        }
+
+        class Container {
+            constructor(x, y, type, img) {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.img = img;
+                this.spawnTime = millis();
+                this.lifetime = 7000;
+                this.shouldRemove = false;
+                this.storage = {
+                    botella: 0,
+                    caja: 0,
+                    banano: 0,
+                    hueso: 0
+                };
+                this.width = 100;  // Aumentado el tamaño
+                this.aspectRatio = this.img.width / this.img.height;
+                this.height = this.width / this.aspectRatio;
+            }
+
+            update() {
+                if (millis() - this.spawnTime > this.lifetime) {
+                    this.shouldRemove = true;
+                }
+            }
+
+            display() {
+                image(this.img, this.x - this.width/2, this.y - this.height + 60, this.width, this.height);
+                
+                // Mostrar texto de almacenamiento
+                fill(255);
+                textSize(20);
+                textAlign(CENTER);
+                let itemsText = '';
+                
+                if (this.type === 'reciclaje') {
+                    itemsText = `${this.storage.botella} ${this.storage.caja}`;
+                } else {
+                    itemsText = `${this.storage.banano} ${this.storage.hueso}`;
+                }
+                
+               
+                
+                // Mostrar indicador de tecla si el jugador está cerca
+                if (this.isPlayerNear()) {
+                    fill(255, 255, 0);
+                    textSize(30);
+                    text("Presiona E para almacenar", this.x, this.y - this.height + 30);
+                }
+            }
+
+            isPlayerNear() {
+                return dist(player.x + player.size.width/2, player.y + player.size.height/2, 
+                          this.x, this.y) < 150;
+            }
+
+            storeItems() {
+                if (this.type === 'reciclaje') {
+                    let stored = 0;
+                    if (inventory.botella > 0) {
+                        this.storage.botella += inventory.botella;
+                        stored += inventory.botella * 5;
+                        inventory.botella = 0;
+                    }
+                    if (inventory.caja > 0) {
+                        this.storage.caja += inventory.caja;
+                        stored += inventory.caja * 5;
+                        inventory.caja = 0;
+                    }
+                    return stored;
+                } else {
+                    let stored = 0;
+                    if (inventory.banano > 0) {
+                        this.storage.banano += inventory.banano;
+                        stored += inventory.banano * 5;
+                        inventory.banano = 0;
+                    }
+                    if (inventory.hueso > 0) {
+                        this.storage.hueso += inventory.hueso;
+                        stored += inventory.hueso * 5;
+                        inventory.hueso = 0;
+                    }
+                    return stored;
+                }
+            }
+        }
+
+        function handleContainerInteraction() {
+            for (let container of containers) {
+                if (container.isPlayerNear()) {
+                    let points = container.storeItems();
+                    score += points;
+                    if (score > maxScore) maxScore = score;
+                    return;
+                }
+            }
+        }
+
+        function drawMenu() {
+            textFont('Bangers');
+            fill(0, 0, 0, 150);
+            rect(0, 0, width, height);
+
+            textSize(height * 0.06);
+            fill(255, 0, 0);
+            textAlign(CENTER, CENTER);
+            text("Guardianes Verdes", width / 2, height / 2 - height * 0.1);
+            textSize(height * 0.04);
+            fill("#00d91e");
+            text("Presiona ESPACIO para comenzar", width / 2, height / 2);
+        }
+
+        function drawCharacterSelect() {
+            textFont('Bangers');
+            fill(0, 0, 0, 150);
+            rect(0, 0, width, height);
+
+            textSize(height * 0.06);
+            fill(textColor);
+            textAlign(CENTER, CENTER);
+            text("Selecciona a tu GUARDIAN", width / 2, height / 2 - height * 0.15);
+            
+            textSize(height * 0.04);
+            text("Presiona ENTER para jugar", width / 2, height / 2 + height * 0.3);
+            text("Presiona R para reiniciar la puntuación", width / 2, height / 2 + height * 0.35);
+
+            for (let i = 0; i < characters.length; i++) {
+                let char = characters[i];
+                let x = width / 2 - width * 0.3 + i * width * 0.15;
+                let y = height / 2;
+                let img = characterImages[char].select;
+                let aspectRatio = img.width / img.height;
+                let displayWidth = characterSelectSize.width;
+                let displayHeight = characterSelectSize.width / aspectRatio;
+
+                image(img, x - displayWidth / 2, y, displayWidth, displayHeight);
+
+                if (char === selectedCharacter) {
+                    noFill();
+                    stroke(255, 255, 255);
+                    strokeWeight(3);
+                    rect(x - displayWidth / 2, y, displayWidth, displayHeight);
+                    noStroke();
+                }
+            }
+        }
+
+        function drawGameOver() {
+            textFont('Bangers');
+            fill(0, 0, 0, 150);
+            rect(0, 0, width, height);
+
+            textSize(height * 0.06);
+            fill(255, 0, 0);
+            textAlign(CENTER, CENTER);
+            text("Game Over", width / 2, height / 2 - height * 0.1);
+            textSize(height * 0.04);
+            text("Puntuación: " + score, width / 2, height / 2);
+            text("Máxima puntuación: " + maxScore, width / 2, height / 2 + height * 0.05);
+            text("Presiona R para reiniciar", width / 2, height / 2 + height * 0.1);
+            text("Presiona M para volver al menú", width / 2, height / 2 + height * 0.15);
+        }
+
+        function drawPauseScreen() {
+            textFont('Bangers');
+            fill(0, 0, 0, 150);
+            rect(0, 0, width, height);
+
+            textSize(height * 0.06);
+            fill(textColor);
+            textAlign(CENTER, CENTER);
+            text("Paused", width / 2, height / 2 - height * 0.1);
+            textSize(height * 0.04);
+            text("Presiona ESC para seguir", width / 2, height / 2);
+            text("Presiona M para volver al menú", width / 2, height / 2 + height * 0.1);
+            text("Presiona P para mutear/desmutear", width / 2, height / 2 + height * 0.15);
+        }
+
+        function keyPressed() {
+            if (key === 'p' || key === 'P') {
+                toggleMute();
+                return;
+            }
+
+            switch (gameState) {
+                case "menu":
+                    if (key === " ") {
+                        gameState = "characterSelect";
+                        initializeGame();
+                    }
+                    break;
+
+                case "characterSelect":
+                    if (keyCode === LEFT_ARROW || key === "a") {
+                        let index = characters.indexOf(selectedCharacter);
+                        selectedCharacter = characters[(index - 1 + characters.length) % characters.length];
+                    } else if (keyCode === RIGHT_ARROW || key === "d") {
+                        let index = characters.indexOf(selectedCharacter);
+                        selectedCharacter = characters[(index + 1) % characters.length];
+                    } else if (keyCode === ENTER) {
+                        gameState = "playing";
+                        startTime = millis();
+                        totalPausedTime = 0;
+                        if (!isMuted) bgMusic.play();
+                    } else if (key === "r") {
+                        maxScore = 0;
+                    }
+                    break;
+
+                case "playing":
+                    if (!playerDead) {
+                        if (keyCode === LEFT_ARROW || key === "a") moveLeft = true;
+                        else if (keyCode === RIGHT_ARROW || key === "d") moveRight = true;
+                        else if ((keyCode === UP_ARROW || key === "w" || key === " ") && player.isOnGround()) player.jump();
+                        else if (keyCode === ESCAPE) {
+                            gameState = "paused";
+                            pauseStartTime = millis();
+                            bgMusic.pause();
+                        }
+                        else if (key === 'e' || key === 'E') {
+                            handleContainerInteraction();
+                        }
+                    }
+                    break;
+
+                case "gameOver":
+                    if (key === "r") resetGame();
+                    else if (key === "m") {
+                        gameState = "menu";
+                        initializeGame();
+                    }
+                    break;
+
+                case "paused":
+                    if (keyCode === ESCAPE) {
+                        gameState = "playing";
+                        totalPausedTime += millis() - pauseStartTime;
+                        if (!isMuted) bgMusic.play();
+                    } else if (key === "m") {
+                        gameState = "menu";
+                        initializeGame();
+                    }
+                    break;
+            }
+        }
+
+        function keyReleased() {
+            if (keyCode === LEFT_ARROW || key === "a") moveLeft = false;
+            else if (keyCode === RIGHT_ARROW || key === "d") moveRight = false;
+        }
+
+        function resetGame() {
+            initializeGame();
+            gameState = "playing";
+            if (!isMuted) bgMusic.play();
+        }
+
+        class Player {
+            constructor() {
+                this.x = width / 2;
+                this.y = height - 50;
+                this.size = playerSize;
+                this.speed = 7;
+                this.yVelocity = 0;
+                this.isJumping = false;
+                this.displayHeight = 0;
+                this.currentImage = characterImages[selectedCharacter].stand;
+            }
+
+            update() {
+                const img = this.currentImage;
+                const aspectRatio = img.width / img.height;
+                this.displayHeight = this.size.width / aspectRatio;
+
+                this.yVelocity += gravity;
+                this.y += this.yVelocity;
+
+                this.x = constrain(this.x, 0, width - this.size.width);
+                this.y = constrain(this.y, 0, height - this.displayHeight);
+
+                if (this.y >= height - this.displayHeight - 50) {
+                    this.y = height - this.displayHeight - 50;
+                    this.yVelocity = 0;
+                    this.isJumping = false;
+                }
+
+                if (!playerDead) {
+                    if (moveLeft) {
+                        this.move(-1);
+                        this.currentImage = characterImages[selectedCharacter].left;
+                    } else if (moveRight) {
+                        this.move(1);
+                        this.currentImage = characterImages[selectedCharacter].right;
+                    } else {
+                        this.currentImage = characterImages[selectedCharacter].stand;
+                    }
+                }
+
+                if (playerDead) {
+                    this.currentImage = characterImages[selectedCharacter].dead;
+                }
+            }
+
+            move(direction) {
+                this.x += direction * this.speed;
+            }
+
+            jump() {
+                if (!this.isJumping) {
+                    this.yVelocity = -15;
+                    this.isJumping = true;
+                }
+            }
+
+            isOnGround() {
+                return this.y >= height - this.displayHeight - 150;
+            }
+
+            display() {
+                let img = this.currentImage;
+                let aspectRatio = img.width / img.height;
+                let displayWidth = this.size.width;
+                let displayHeight = displayWidth / aspectRatio;
+                image(img, this.x, this.y, displayWidth, displayHeight);
+            }
+        }
+
+        class Enemy {
+            constructor() {
+                this.x = width / 2;
+                this.y = height * 0.05;
+                this.size = enemySize;
+                this.speed = baseEnemySpeed;
+                this.direction = 1;
+            }
+
+            update() {
+                this.speed = baseEnemySpeed + difficultyLevel * 0.5;
+
+                this.x += this.direction * this.speed;
+                if (this.x <= 0 || this.x >= width - this.size.width) {
+                    this.direction *= -1;
+                }
+
+                if (random() < 0.01) {
+                    this.direction *= -1;
+                }
+            }
+
+            display() {
+                let aspectRatio = enemyImg.width / enemyImg.height;
+                let displayWidth = this.size.width;
+                let displayHeight = this.size.width / aspectRatio;
+                image(enemyImg, this.x, this.y, displayWidth, displayHeight);
+            }
+
+            throwObject() {
+                let type = random() < 0.6 ? "bad" : "good";
+                let obj;
+                
+                if (type === "good") {
+                    if (random() < 0.25) {
+                        let cura = goodObjectsImages.find(img => img.subtype === 'cura');
+                        obj = new FallingObject(
+                            this.x + this.size.width / 2,
+                            this.y + this.size.height,
+                            type,
+                            cura.img,
+                            cura.subtype
+                        );
+                    } else {
+                        let regularItems = goodObjectsImages.filter(img => img.subtype !== 'cura');
+                        let selected = random(regularItems);
+                        obj = new FallingObject(
+                            this.x + this.size.width / 2,
+                            this.y + this.size.height,
+                            type,
+                            selected.img,
+                            selected.subtype
+                        );
+                    }
+                } else {
+                    obj = new FallingObject(
+                        this.x + this.size.width / 2,
+                        this.y + this.size.height,
+                        type,
+                        random(badObjectsImages)
+                    );
+                }
+                
+                obj.speed = baseObjectSpeed + difficultyLevel * 0.5;
+                fallingObjects.push(obj);
+            }
+        }
+
+        class FallingObject {
+            constructor(x, y, type, img, subtype = null) {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.img = img;
+                this.subtype = subtype;
+                this.speed = baseObjectSpeed;
+                this.landed = false;
+                this.landedTime = 0;
+                this.shouldRemove = false;
+                
+                this.aspectRatio = this.img.width / this.img.height;
+                this.width = objectSize.width;
+                this.height = objectSize.width / this.aspectRatio;
+            }
+
+            update() {
+                if (!this.landed) {
+                    this.y += this.speed;
+                    
+                    if (this.type === "good") {
+                        if (this.y + this.height >= height - 50) {
+                            this.landed = true;
+                            this.landedTime = millis();
+                            this.y = height - 50 - this.height;
+                        }
+                    } else {
+                        if (this.y + this.height >= height) {
+                            this.shouldRemove = true;
+                        }
+                    }
+                } else {
+                    if (millis() - this.landedTime >= 5000) {
+                        this.shouldRemove = true;
+                    }
+                }
+            }
+
+            display() {
+                image(this.img, this.x - this.width/2, this.y, this.width, this.height);
+            }
+
+            hits(player) {
+                let playerLeft = player.x;
+                let playerRight = player.x + player.size.width;
+                let playerTop = player.y;
+                let playerBottom = player.y + player.displayHeight;
+
+                let objLeft = this.x - this.width/2;
+                let objRight = this.x + this.width/2;
+                let objTop = this.y;
+                let objBottom = this.y + this.height;
+
+                return !(objRight < playerLeft || 
+                        objLeft > playerRight || 
+                        objBottom < playerTop || 
+                        objTop > playerBottom);
+            }
+        }
+    </script>
+</body>
+</html>

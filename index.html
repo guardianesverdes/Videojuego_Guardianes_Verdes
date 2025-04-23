@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Beta Guardianes Verdes</title>
+    <title>Videojuego-Guardianes-verdes</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
     <style>
@@ -36,9 +36,9 @@
         }
 
         @font-face {
-  font-family: myFirstFont;
-  src: url(../Videojuego-Guardianes-verdes/fonts/Bangers-Regular.ttf);
-}
+            font-family: myFirstFont;
+            src: url(../Videojuego-Guardianes-verdes/fonts/Bangers-Regular.ttf);
+        }
     </style>
 </head>
 <body>
@@ -121,7 +121,19 @@
         const objectSize = { width: 50, height: 50 };
 
         let menuBackground = 'imagenes/fondos/menuinicio.svg';
-        let characterSelectBackground = 'imagenes/fondos/menuseleccion.svg';
+        let introBackgrounds = [
+            'imagenes/fondos/escena1.svg',
+            'imagenes/fondos/escena2.svg',
+            'imagenes/fondos/escena3.svg',
+            'imagenes/fondos/escena4.svg'
+        ];
+        let currentSlide = 0;
+        let characterSelectBackground = 'imagenes/fondos/fondoseleccion.svg';
+        let postCharacterIntroBackgrounds = [
+            'imagenes/fondos/tuto1.svg',
+            'imagenes/fondos/tuto2.svg'
+        ];
+        let currentPostSlide = 0;
         let playingBackgrounds = [
             'imagenes/fondos/escenariov1.svg',
             'imagenes/fondos/escenariov2.svg',
@@ -302,9 +314,17 @@
                     document.body.style.backgroundImage = `url(${menuBackground})`;
                     drawMenu();
                     break;
+                case "introSlides":
+                    document.body.style.backgroundImage = `url(${introBackgrounds[currentSlide]})`;
+                    drawIntroSlide();
+                    break;
                 case "characterSelect":
                     document.body.style.backgroundImage = `url(${characterSelectBackground})`;
                     drawCharacterSelect();
+                    break;
+                case "postCharacterIntro":
+                    document.body.style.backgroundImage = `url(${postCharacterIntroBackgrounds[currentPostSlide]})`;
+                    drawPostCharacterIntro();
                     break;
                 case "playing":
                     document.body.style.backgroundImage = `url(${currentPlayingBackground})`;
@@ -319,6 +339,22 @@
                     drawPauseScreen();
                     break;
             }
+        }
+
+        function drawIntroSlide() {
+            textFont('Bangers');
+            fill(255);
+            textSize(height * 0.04);
+            textAlign(CENTER, BOTTOM);
+            text("Presiona ESPACIO para continuar", width/2, height - 30);
+        }
+
+        function drawPostCharacterIntro() {
+            textFont('Bangers');
+            fill(255);
+            textSize(height * 0.04);
+            textAlign(CENTER, BOTTOM);
+        
         }
 
         function updateGame() {
@@ -540,8 +576,6 @@
                     itemsText = `${this.storage.banano} ${this.storage.hueso}`;
                 }
                 
-               
-                
                 // Mostrar indicador de tecla si el jugador está cerca
                 if (this.isPlayerNear()) {
                     fill(255, 255, 0);
@@ -624,11 +658,13 @@
             textSize(height * 0.04);
             text("", width / 2, height / 2 + height * 0.3);
             text("", width / 2, height / 2 + height * 0.35);
+             // Ajusta esta línea para subir los personajes (cambia height / 2 a height * 0.4)
+    const characterBaseY = height * 0.4; // Ajusta este valor para subir/bajar los personajes
 
             for (let i = 0; i < characters.length; i++) {
                 let char = characters[i];
                 let x = width / 2 - width * 0.3 + i * width * 0.15;
-                let y = height / 2;
+                let y = characterBaseY; // Usamos la nueva posición vertical
                 let img = characterImages[char].select;
                 let aspectRatio = img.width / img.height;
                 let displayWidth = characterSelectSize.width;
@@ -654,11 +690,13 @@
             fill(0, 0, 0);
             textAlign(CENTER, CENTER);
             text("", width / 2, height / 2 - height * 0.1);
+            
+            // Añadimos un desplazamiento horizontal (puedes ajustar el 0.15 según necesites)
+            let offsetX = width * 0.15;  // <- Controla qué tan a la derecha se mueve
+            
             textSize(height * 0.04);
-            text("Puntuación: " + score, width / 2, height / 2);
-            text("Máxima puntuación: " + maxScore, width / 2, height / 2 + height * 0.05);
-            text("", width / 2, height / 2 + height * 0.1);
-            text("", width / 2, height / 2 + height * 0.15);
+            text("Puntuación: " + score, width / 2 + offsetX, height / 2); // <- Agregamos offsetX
+            text("Máxima puntuación: " + maxScore, width / 2 + offsetX, height / 2 + height * 0.05); // <- Aquí también
         }
 
         function drawPauseScreen() {
@@ -685,8 +723,19 @@
             switch (gameState) {
                 case "menu":
                     if (key === " ") {
-                        gameState = "characterSelect";
-                        initializeGame();
+                        gameState = "introSlides";
+                        currentSlide = 0;
+                    }
+                    break;
+
+                case "introSlides":
+                    if (key === " ") {
+                        if (currentSlide < introBackgrounds.length - 1) {
+                            currentSlide++;
+                        } else {
+                            gameState = "characterSelect";
+                            initializeGame();
+                        }
                     }
                     break;
 
@@ -698,12 +747,23 @@
                         let index = characters.indexOf(selectedCharacter);
                         selectedCharacter = characters[(index + 1) % characters.length];
                     } else if (keyCode === ENTER) {
-                        gameState = "playing";
-                        startTime = millis();
-                        totalPausedTime = 0;
-                        if (!isMuted) bgMusic.play();
+                        gameState = "postCharacterIntro";
+                        currentPostSlide = 0;
                     } else if (key === "r") {
                         maxScore = 0;
+                    }
+                    break;
+
+                case "postCharacterIntro":
+                    if (key === " ") {
+                        if (currentPostSlide < postCharacterIntroBackgrounds.length - 1) {
+                            currentPostSlide++;
+                        } else {
+                            gameState = "playing";
+                            startTime = millis();
+                            totalPausedTime = 0;
+                            if (!isMuted) bgMusic.play();
+                        }
                     }
                     break;
 
@@ -928,6 +988,7 @@
                 } else {
                     if (millis() - this.landedTime >= 5000) {
                         this.shouldRemove = true;
+                   
                     }
                 }
             }

@@ -125,7 +125,8 @@
             'imagenes/fondos/escena1.svg',
             'imagenes/fondos/escena2.svg',
             'imagenes/fondos/escena3.svg',
-            'imagenes/fondos/escena4.svg'
+            'imagenes/fondos/escena4.svg',
+            'imagenes/fondos/escena5.svg'
         ];
         let currentSlide = 0;
         let characterSelectBackground = 'imagenes/fondos/fondoseleccion.svg';
@@ -227,14 +228,14 @@
                 stand: loadImage('imagenes/personajes/cuerpospinpie.gif'),
                 left: loadImage('imagenes/personajes/ratacorriendoizq.gif'),
                 right: loadImage('imagenes/personajes/ratacorriendoder.gif'),
-                select: loadImage('imagenes/personajes/spin2.svg'),
+                select: loadImage('imagenes/personajes/cuerpo.svg'),
                 dead: loadImage('imagenes/personajes/cuerpospindie.gif')
             };
             characterImages["red"] = {
                 stand: loadImage('imagenes/personajes/wonejo.gif'),
                 left: loadImage('imagenes/personajes/wonejocaminataizq.gif'),
                 right: loadImage('imagenes/personajes/wonejocaminatader.gif'),
-                select: loadImage('imagenes/personajes/wonejoquieto2.svg'),
+                select: loadImage('imagenes/personajes/conejo.svg'),
                 dead: loadImage('imagenes/personajes/wonejodie.gif')
             };
             characterImages["yellow"] = {
@@ -252,7 +253,7 @@
                 dead: loadImage('imagenes/personajes/capibaradie.gif')
             };
 
-            initializeGame();
+            initializeGame(false);
         }
 
         function updateAudioControls() {
@@ -277,7 +278,7 @@
             resizeCanvas(windowWidth, windowHeight);
         }
 
-        function initializeGame() {
+        function initializeGame(resetMusic = true) {
             player = new Player();
             enemy = new Enemy();
             startTime = millis();
@@ -298,7 +299,7 @@
                 hueso: 0
             };
             
-            if (!isMuted) {
+            if (!isMuted && resetMusic) {
                 bgMusic.currentTime = 0;
                 bgMusic.play();
             }
@@ -346,7 +347,7 @@
             fill(255);
             textSize(height * 0.04);
             textAlign(CENTER, BOTTOM);
-            text("Presiona ESPACIO para continuar", width/2, height - 30);
+            text("", width/2, height - 30);
         }
 
         function drawPostCharacterIntro() {
@@ -734,7 +735,7 @@
                             currentSlide++;
                         } else {
                             gameState = "characterSelect";
-                            initializeGame();
+                            initializeGame(false); // No reiniciar la música aquí
                         }
                     }
                     break;
@@ -787,7 +788,7 @@
                     if (key === "r") resetGame();
                     else if (key === "m") {
                         gameState = "menu";
-                        initializeGame();
+                        initializeGame(false); // No reiniciar la música
                     }
                     break;
 
@@ -798,7 +799,7 @@
                         if (!isMuted) bgMusic.play();
                     } else if (key === "m") {
                         gameState = "menu";
-                        initializeGame();
+                        initializeGame(false); // No reiniciar la música
                     }
                     break;
             }
@@ -810,7 +811,7 @@
         }
 
         function resetGame() {
-            initializeGame();
+            initializeGame(); // Esto reiniciará la música solo al reiniciar el juego
             gameState = "playing";
             if (!isMuted) bgMusic.play();
         }
